@@ -3,18 +3,15 @@ package dev.hsantiago.protecaoocularwearos.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.hsantiago.protecaoocularwearos.model.LightClassifier
-import dev.hsantiago.protecaoocularwearos.model.LightReading
 import dev.hsantiago.protecaoocularwearos.model.LightState
 import dev.hsantiago.protecaoocularwearos.sensor.LightSensorManager
 import dev.hsantiago.protecaoocularwearos.util.VibrationHelper
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class LightViewModel(
@@ -30,9 +27,6 @@ class LightViewModel(
 
     private val _estadoAtual = MutableStateFlow<LightState>(LightState.Dim)
     val estadoAtual: StateFlow<LightState> = _estadoAtual.asStateFlow()
-
-    private val _historico = MutableStateFlow<List<LightReading>>(emptyList())
-    val historico: StateFlow<List<LightReading>> = _historico.asStateFlow()
 
     init {
         observeSensor()
@@ -54,7 +48,12 @@ class LightViewModel(
 
     private fun onLuxReading(lux: Float) {
         _luxAtual.value = lux
-        _estadoAtual.value = LightClassifier.classify(lux)
+        val novoEstado = LightClassifier.classify(lux)
+        val estadoAnterior = _estadoAtual.value
+        if (estadoAnterior != novoEstado) {
+            vibrationHelper.vibrate()
+        }
+        _estadoAtual.value = novoEstado
     }
 
     fun toggleMonitoring() {
